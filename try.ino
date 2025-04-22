@@ -60,6 +60,7 @@ void setup()
     lastWakeTime = millis();
 }
 
+
 void loop()
 {
     unsigned long currentTime = millis();
@@ -73,6 +74,11 @@ void loop()
         {
             randomBlink();
         }
+
+        // // Check if time to sleep
+        // if (millis() - lastWakeTime > 15 * 60 * 1000) { // After 15 minutes
+        //   goToSleep();
+        // }
     }
 
     if (!isSleeping)
@@ -91,6 +97,8 @@ void loop()
             lastMoodChangeTime = currentTime;
             moodInterval = random(5000, 15000); // Reset with new random interval
         }
+
+        // Additional animation or behavior logic can be placed here
     }
     else
     {
@@ -114,11 +122,10 @@ void displayIP()
     display.display();
 }
 
-// Animate eyes, mouth, and servo movement
+// Animate eyes and servo movement
 void animateEyesAndServo()
 {
     drawEyeOpen();
-    drawSmile();
     moveServoLeft();
     randomBlink();
     moveServoRight();
@@ -148,25 +155,25 @@ void changeMood()
     Serial.println("Mood changed");
 }
 
-// Draw a smiling mouth
+// Draw a smiling mouth using a series of small circles
 void drawSmile()
 {
     for (int i = 0; i <= 10; i++)
     {
         int x = 55 + i;
         int y = 52 + (int)(2 * sin(i * PI / 10));
-        display.fillCircle(x, y, 1, SSD1306_WHITE); // Draw smile
+        display.fillCircle(x, y, 1, SSD1306_WHITE); // Draw small circles to form a smile
     }
 }
 
-// Draw a frowning mouth
+// Draw a dis-smiling mouth using a series of small circles
 void drawDisSmile()
 {
     for (int i = 0; i <= 10; i++)
     {
         int x = 55 + i;
         int y = 58 - (int)(2 * sin(i * PI / 10));
-        display.fillCircle(x, y, 1, SSD1306_WHITE); // Draw frown
+        display.fillCircle(x, y, 1, SSD1306_WHITE); // Draw small circles to form a frown
     }
 }
 
@@ -181,39 +188,67 @@ void drawEyeOpen()
     display.display();
 }
 
-// Move servo left and animate eyes and mouth
+// Draw eyes closed
+void drawEyeClosed()
+{
+    display.clearDisplay();
+    display.drawLine(20, 32, 50, 32, SSD1306_WHITE);  // Left eye closed
+    display.drawLine(78, 32, 108, 32, SSD1306_WHITE); // Right eye closed
+    display.display();
+}
+
+// Draw eyes looking left
+void lookLeft()
+{
+    display.clearDisplay();
+    display.drawRoundRect(20, 22, 30, 20, 10, SSD1306_WHITE); // Left eye
+    display.fillCircle(28, 32, 5, SSD1306_WHITE);             // Left pupil
+    display.drawRoundRect(78, 22, 30, 20, 10, SSD1306_WHITE); // Right eye
+    display.fillCircle(86, 32, 5, SSD1306_WHITE);             // Right pupil
+    display.display();
+}
+
+// Draw eyes looking right
+void lookRight()
+{
+    display.clearDisplay();
+    display.drawRoundRect(20, 22, 30, 20, 10, SSD1306_WHITE); // Left eye
+    display.fillCircle(42, 32, 5, SSD1306_WHITE);             // Left pupil
+    display.drawRoundRect(78, 22, 30, 20, 10, SSD1306_WHITE); // Right eye
+    display.fillCircle(100, 32, 5, SSD1306_WHITE);            // Right pupil
+    display.display();
+}
+
+// Move servo left and animate eyes
 void moveServoLeft()
 {
+    lookLeft();
     for (int i = angle; i >= 0; i -= angleStep)
     {
-        lookLeft();
-        drawSmile(); // Add smile during movement
         servo.write(i);
         delay(50);
     }
     angle = 0;
 }
 
-// Move servo right and animate eyes and mouth
+// Move servo right and animate eyes
 void moveServoRight()
 {
+    lookRight();
     for (int i = angle; i <= 180; i += angleStep)
     {
-        lookRight();
-        drawSmile(); // Add smile during movement
         servo.write(i);
         delay(50);
     }
     angle = 180;
 }
 
-// Center the servo and animate eyes and mouth
+// Center the servo and reset eyes
 void centerServo()
 {
+    drawEyeOpen();
     for (int i = angle; i != 90; i += (angle < 90 ? angleStep : -angleStep))
     {
-        drawEyeOpen();
-        drawSmile(); // Add smile during centering
         servo.write(i);
         delay(50);
     }
@@ -232,24 +267,15 @@ void randomBlink()
     }
 }
 
-// Draw eyes closed
-void drawEyeClosed()
-{
-    display.clearDisplay();
-    display.drawLine(20, 32, 50, 32, SSD1306_WHITE);  // Left eye closed
-    display.drawLine(78, 32, 108, 32, SSD1306_WHITE); // Right eye closed
-    drawDisSmile();                                   // Frown while eyes are closed
-    display.display();
-}
-
 // Enter sleep mode
+// Enter sleep mode with moving "Z" and randomized mouth
 void goToSleep()
 {
     Serial.println("Entering sleep mode...");
     isSleeping = true;
     lastWakeTime = millis();
 
-    // Random mouth on sleep
+    // Randomly decide if the mouth should be a smile or a frown when going to sleep
     if (random(0, 2) == 0)
     {
         drawSmile();
@@ -261,11 +287,16 @@ void goToSleep()
     display.display();
 
     for (int i = 0; i < 20; i++)
-    {
-        drawEyeClosed();
+    {                    // Run the "Z" animation loop
+        drawEyeClosed(); // Draw closed eyes
+
         display.setTextSize(1);
-        display.setCursor(60, 40 - i); // Moving "Z" animation
+        display.setTextColor(SSD1306_WHITE);
+
+        int zY = 40 - i; // Start from the eye and move up
+        display.setCursor(60, zY);
         display.print("Z");
+
         display.display();
         delay(200);
         display.clearDisplay();
@@ -279,5 +310,5 @@ void wakeUp()
     lastWakeTime = millis();
     isSleeping = false;
     drawEyeOpen();
-    delay(500);
+    delay(500); // Quick start delay
 }
